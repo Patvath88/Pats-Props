@@ -1,29 +1,23 @@
 import streamlit as st
-from clients.balldontlie_client import BallDontLieClient
 
-def display_sidebar():
-    """
-    Displays the sidebar with game selection dropdown.
-    Returns the selected game's data.
-    """
-    st.sidebar.header("Select a Game")
-    client = BallDontLieClient()
-    games = client.get_games_for_today()
+def display_sidebar(prop_service):
+    """Renders the sidebar and returns the selected game ID."""
+    with st.sidebar:
+        st.header("NBA Games")
+        
+        games = prop_service.get_all_games()
+        
+        if not games:
+            st.warning("No NBA games found. The API might be unavailable or there are no games scheduled.")
+            return None
 
-    if not games:
-        st.sidebar.warning("No NBA games scheduled for today.")
-        return None
-
-    game_options = {
-        f"{game['visitor_team']['full_name']} @ {game['home_team']['full_name']}": game
-        for game in games
-    }
-    
-    selected_game_str = st.sidebar.selectbox(
-        "Choose a matchup:",
-        options=list(game_options.keys())
-    )
-
-    if selected_game_str:
-        return game_options[selected_game_str]
-    return None
+        # Create a list of game labels for the radio button
+        game_labels = {f"{game['away_team']} @ {game['home_team']}": game['id'] for game in games}
+        
+        selected_label = st.radio(
+            "Select a game to view props:",
+            options=list(game_labels.keys())
+        )
+        
+        # Return the ID of the selected game
+        return game_labels[selected_label]
