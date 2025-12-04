@@ -1,4 +1,3 @@
-import os
 import requests
 import streamlit as st
 import logging
@@ -18,7 +17,39 @@ class OddsAPIClient:
         params = {
             "apiKey": self.api_key,
             "regions": "us",
-            "markets": "h2h,spreads,totals,player_points,player_rebounds,player_assists",
+            "markets": ",".join([
+                "player_points",
+                "player_rebounds",
+                "player_assists",
+                "player_threes",
+                "player_blocks",
+                "player_steals",
+                "player_blocks_steals",
+                "player_turnovers",
+                "player_points_rebounds_assists",
+                "player_points_rebounds",
+                "player_points_assists",
+                "player_rebounds_assists",
+                "player_field_goals",
+                "player_frees_made",
+                "player_frees_attempts",
+                "player_first_basket",
+                "player_first_team_basket",
+                "player_double_double",
+                "player_triple_double",
+                "player_method_of_first_basket",
+                "player_points_alternate",
+                "player_rebounds_alternate",
+                "player_assists_alternate",
+                "player_blocks_alternate",
+                "player_steals_alternate",
+                "player_turnovers_alternate",
+                "player_threes_alternate",
+                "player_points_assists_alternate",
+                "player_points_rebounds_alternate",
+                "player_rebounds_assists_alternate",
+                "player_points_rebounds_assists_alternate"
+            ]),
             "oddsFormat": "american"
         }
         
