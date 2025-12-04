@@ -1,15 +1,8 @@
-import sys
-import os
 import streamlit as st
 
-# --- Force Python to recognize the 'ui' package ---
-# This is the new code that should fix the ImportError
-project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, project_root)
-# ----------------------------------------------------
-
-from ui.app_page import display_page
-from ui.sidebar import display_sidebar
+# Imports are now direct because the files are in the same folder
+from app_page import display_page
+from sidebar import display_sidebar
 from services.prop_generation import PropGenerationService
 
 def main():
