@@ -1,37 +1,59 @@
-import os
 import requests
-from datetime import datetime
-from dotenv import load_dotenv
-
-load_dotenv()
+import time
 
 class BallDontLieClient:
     def __init__(self):
-        self.api_key = os.getenv("BALLDONTLIE_API_KEY")
-        if not self.api_key:
-            raise ValueError("API key for balldontlie not found.")
-        self.base_url = "https://api.balldontlie.io/v1"
-        self.headers = {"Authorization": self.api_key}
+        self.base_url = "https://www.balldontlie.io/api/v1"
 
-    def get_games_for_today(self) -> list[dict]:
-        today_str = datetime.now().strftime('%Y-%m-%d')
-        endpoint = f"{self.base_url}/games"
-        params = {"dates[]": [today_str]}
+    def _make_request(self, endpoint, params=None):
+        """Helper function to make requests to the API."""
         try:
-            response = requests.get(endpoint, headers=self.headers, params=params)
-            response.raise_for_status()
-            return response.json().get('data', [])
+            response = requests.get(f"{self.base_url}/{endpoint}", params=params)
+            response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
+            return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching games from balldontlie: {e}")
-            return []
+            print(f"API request error: {e}")
+            return None
 
-    def get_player_stats_for_season(self, player_id: int, season: int = 2023) -> list[dict]:
-        endpoint = f"{self.base_url}/stats"
-        params = {"seasons[]": [season], "player_ids[]": [player_id], "per_page": 100}
-        try:
-            response = requests.get(endpoint, headers=self.headers, params=params)
-            response.raise_for_status()
-            return response.json().get('data', [])
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching stats for player {player_id}: {e}")
-            return []
+    def get_player_id(self, player_name):
+        """Fetches the ID for a given player name."""
+        data = self._make_request("players", params={"search": player_name})
+        if data and data['data']:
+            # Return the first match, which is usually the most relevant
+            return data['data'][0]['id']
+        return None
+
+    def get_player_season_averages(self, player_name):
+        """
+        Fetches the current season's average stats for a single player.
+        """
+        player_id = self.get_player_id(player_name)
+        if not player_id:
+            return { "error": "Player not found" }
+            
+        params = {
+            "player_ids[]": [player_id]
+        }
+        data = self._make_request("season_averages", params=params)
+        
+        if data and data['data']:
+            return data['data'][0] # Return the stats dictionary
+        return { "error": "Stats not found" }
+
+    def get_multiple_player_season_averages(self, player_names):
+        """
+        Fetches season average stats for a list of player names.
+        This is the new, efficient function.
+        """
+        player_stats = {}
+        for name in player_names:
+            if not name: continue # Skip if name is None or empty
+            
+            # Use the single-player function to get stats for each player
+            stats = self.get_player_season_averages(name)
+            player_stats[name] = stats
+            
+            # Be respectful to the API and avoid hitting rate limits
+            time.sleep(0.7) # Wait 700ms between calls
+            
+        return player_stats
