@@ -1,58 +1,53 @@
 import os
 import requests
-import json
-from datetime import datetime, timedelta
-from dotenv import load_dotenv
-from db.database import SessionLocal, OddsApiCache
+import pandas as pd
 
-load_dotenv()
-
-class OddsApiClient:
+class OddsAPIClient:
     def __init__(self):
-        self.api_key = os.getenv("ODDS_API_KEY")
+        self.api_key = os.getenv('ODDS_API_KEY')
         if not self.api_key:
-            raise ValueError("API key for The Odds API not found.")
+            raise ValueError("ODDS_API_KEY not found in environment variables.")
         self.base_url = "https://api.the-odds-api.com/v4"
-        self.db = SessionLocal()
 
-    def get_odds_for_game(self, game: dict) -> dict | None:
-        """
-        Fetches player prop odds for a specific game.
-        Uses a cache to avoid re-fetching data within a 6-hour window.
-        """
-        game_id = f"{game['home_team']['abbreviation']}_{game['visitor_team']['abbreviation']}_{game['date']}"
-
-        # Check cache first
-        cached_entry = self.db.query(OddsApiCache).filter(OddsApiCache.game_id == game_id).first()
-        if cached_entry and (datetime.utcnow() - cached_entry.fetched_at < timedelta(hours=6)):
-            return cached_entry.odds_data
-
-        # If not in cache or stale, fetch from API
-        endpoint = f"{self.base_url}/sports/basketball_nba/events/{game['id']}/odds"
+    def get_nba_games(self):
+        """Fetches all available NBA games and their player prop odds."""
+        url = f"{self.base_url}/sports/basketball_nba/odds/"
+        
+        # This is the test configuration to see if your API key can fetch basic odds.
         params = {
-            "apiKey": self.api_key,
-            "regions": "us",
-            "markets": "player_points,player_rebounds,player_assists",
-            "bookmakers": "fanduel,draftkings"
+            'apiKey': self.api_key,
+            'regions': 'us',
+            'markets': 'h2h',  # <-- THIS IS THE TEMPORARY CHANGE FOR OUR TEST
+            'bookmakers': 'draftkings,fanduel,betmgm,caesars,pointsbetus'
         }
+        
         try:
-            response = requests.get(endpoint, params=params)
+            response = requests.get(url, params=params)
+            response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching NBA games from Odds API: {e}")
+            return []
+
+    def get_odds_for_game(self, game_id, markets='player_points,player_rebounds,player_assists'):
+        """
+        Fetches specific player prop odds for a single game ID.
+        NOTE: This function is not currently used because get_nba_games() fetches
+        all odds at once, which is more efficient for API usage.
+        It is kept here for potential future use or more detailed lookups.
+        """
+        url = f"{self.base_url}/sports/basketball_nba/events/{game_id}/odds"
+        params = {
+            'apiKey': self.api_key,
+            'regions': 'us',
+            'markets': markets,
+            'bookmakers': 'draftkings,fanduel,betmgm,caesars,pointsbetus'
+        }
+        
+        try:
+            response = requests.get(url, params=params)
             response.raise_for_status()
-            odds_data = response.json()
-
-            # Update cache
-            if cached_entry:
-                cached_entry.odds_data = odds_data
-                cached_entry.fetched_at = datetime.utcnow()
-            else:
-                new_entry = OddsApiCache(game_id=game_id, odds_data=odds_data)
-                self.db.add(new_entry)
-            self.db.commit()
-
-            return odds_data
+            return response.json()
         except requests.exceptions.RequestException as e:
             print(f"Error fetching odds for game {game_id}: {e}")
-            self.db.rollback()
             return None
-        finally:
-            self.db.close()
