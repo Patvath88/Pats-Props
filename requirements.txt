@@ -1,0 +1,8 @@
+streamlit
+requests
+python-dotenv
+pandas
+sqlalchemy
+mlflow
+scikit-learn
+lightgbm
