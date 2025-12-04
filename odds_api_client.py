@@ -12,9 +12,6 @@ class OddsAPIClient:
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     def get_nba_games(self):
-        """
-        Fetches upcoming NBA games and their odds.
-        """
         logging.info("Attempting to fetch NBA games from Odds API.")
         
         endpoint = "/v4/sports/basketball_nba/odds"
